@@ -28,16 +28,15 @@ All commands have documented help system. Type *Get-Help about_OutlookConnector*
 
 ### Connecting to Outlook
 - - - - - - - - - - -
-**Connect-Outlook**      - creates Outlook instance in memory, returns MAPI instance
-
-**Start-Outlook**        - starts MS Outlook application GUI, usefull for troubleshooting
+- **Connect-Outlook**      - creates Outlook instance in memory, returns MAPI instance
+- **Start-Outlook**        - starts MS Outlook application GUI, usefull for troubleshooting
 
 
 ### Getting messages to memory
 - - - - - - - - - - - - - -
 - **Get-OutlookInbox**    [-Outlook]                 - returns array of messages in default Inbox folder from Outlook instance, based on the Scripting Guy
-- **Get-OutlookFolder**   [-Outlook] [–Recurse]      - lists all folder (and optionally subfolders) inside Outlook instance, returns array of Outlook folders
-- **Get-OutlookMessage**  –DefaultFolder [-Outlook]  - returns messages in one of default folders based on the name (i.e SentItems, Drafts, etc.)
+- **Get-OutlookFolder**   [-Outlook] [â€“Recurse]      - lists all folder (and optionally subfolders) inside Outlook instance, returns array of Outlook folders
+- **Get-OutlookMessage**  â€“DefaultFolder [-Outlook]  - returns messages in one of default folders based on the name (i.e SentItems, Drafts, etc.)
 [-Outlook] - if Outlook session is not specified, commands will automatically connect
 
 Get functions are returning all properties of a message, so it's good practice to select only properties you need before output to screen. To list all properties of a message type for example Get-OutlookInbox | Get-Member.
@@ -45,8 +44,8 @@ Get functions are returning all properties of a message, so it's good practice t
 
 ### Saving messages to disk
 - - - - - - - - - - - - 
-- **Export-OutlookFolder**      –InputFolder -OutputFolder -FilenameFormat   - saves all messages to folder on a disk
-- **Export-OutlookMessage**     –Message     –OutputFolder -FileNameFormat   - saves individual message to folder on a disk
+- **Export-OutlookFolder**      â€“InputFolder -OutputFolder -FilenameFormat   - saves all messages to folder on a disk
+- **Export-OutlookMessage**     â€“Message     â€“OutputFolder -FileNameFormat   - saves individual message to folder on a disk
 Input parameter (folder or message) can be piped. Export functions are saving messages in individual MSG files.
 
 
