@@ -1,0 +1,2 @@
+Export-Folder - add failed messages to error variable, so far done only to export-message, export-body
+Simplyfy Error handling if message property not found, in all export functions; duplicate code; maybe use new array and pass back value only once at the end, if needed

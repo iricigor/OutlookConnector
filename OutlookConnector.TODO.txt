@@ -1,0 +1,43 @@
+﻿TODO in Module file
+-------------------
+upload code to git
+
+
+
+TODO in Functions
+-----------------
+
+
+TODO Before Publish
+-------------------
+
+
+
+
+
+DONE things
+-----------
+Module part
+-----------
+search for 0.91 update to 0.92
+Update about_OC, requests for next versions
+Add readme.md file (http://dillinger.io/), 
+
+
+Functions part
+--------------
+Export-OutlookMessageBody -Message -OutputFolder -FilenameFormat -ExportFormat  - saves message body to specified format (html, rtf, txt)
+ Check input object properties validation to use really needed parameters
+
+Add 2 helper functions: validate Properties, Create Message Name
+
+Export-OutlookMessageBody - add synopsis
+Get-OutlookFolder - add counter 1/5 of folders
+
+Export-OutlookMessage - Use new helper functions
+
+Add Helper function Add-Numbering FileName FileExtension, to add numbering like (1) if needed
+
+Export-Message/Body - add failed messages to error variable; export-folder in next iteration
+
+Get-OutlookFolder - to get any folder, 3 parameter sets (Main,FullPath,Name unique)
