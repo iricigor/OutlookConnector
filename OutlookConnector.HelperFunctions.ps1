@@ -39,7 +39,7 @@ function Validate-Properties {
         [Parameter(Mandatory=$true)][psobject]$InputObject,
         [Parameter(Mandatory=$true)][String[]]$RequiredProperties
     )
-    $ObjectProperties = ($Message | Get-Member).Name
+    $ObjectProperties = ($InputObject | Get-Member).Name
     $NotFound = @()
 
     foreach ($Prop in $Properties) {
@@ -67,7 +67,7 @@ function Create-FileName {
     while ($FileName -match $RegEx) {
         $property = $Matches[2]
         # calling function should verify that all properties exist
-        $FileName = $FileName -replace ('%'+$property+'%'),($Message.($property))
+        $FileName = $FileName -replace ('%'+$property+'%'),($InputObject.($property))
     }
     # return value
     $FileName
