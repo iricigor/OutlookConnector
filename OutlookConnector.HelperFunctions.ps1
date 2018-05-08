@@ -88,7 +88,7 @@ function Add-Numbering {
     $FullFilePath = $FileName + '.' + $FileExtension
     
     # Check if file exists, and if yes, update name with numbering
-    while (Test-Path -Path $FullFilePath) {
+    while (Test-Path -LiteralPath $FullFilePath) {
         $FullFilePath = $FileName + ' (' + (++$i) + ').' + $FileExtension
     }
 
