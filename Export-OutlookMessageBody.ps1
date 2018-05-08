@@ -85,6 +85,9 @@ BEGIN {
     $ReqProps = @('Subject','HTMLBody','RTFBody','Body')
     $ReqProps += ([regex]::Matches($FileNameFormat,$RegEx) ).Value -replace '%',''
 
+    # resolve relative path since MailItem.SaveAs does not support them
+    $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
+
     # initialize queue for skipped messages, if it is passed
     if ($SkippedMessages) {
         $SkippedMessages.Value = @()
@@ -117,16 +120,10 @@ PROCESS {
         
         # main code
         $FileName = Create-FileName -InputObject $Message -FileNameFormat $FileNameFormat   # Create-FileName is internal function
-        
-        $FileName = Get-ValidFileName -FileName  $FileName
-        $FullFilePath = Join-Path -Path $OutputFolder -ChildPath ($FileName + '.' + $ExportFormat)
-    
-        # Check if file exists, and if yes, update name with numbering
-        $i = 0
-        while (Test-Path -Path $FullFilePath) {
-            $FullFilePath = Join-Path -Path $OutputFolder -ChildPath ($FileName + ' (' + (++$i) + ').' + $ExportFormat)
-        }
 
+        # fix file name
+        $FileName = Get-ValidFileName -FileName $FileName
+        $FullFilePath = Add-Numbering -FileName (Join-Path -Path $OutputFolderPath -ChildPath $FileName) -FileExtension $ExportFormat
         Write-Verbose -Message "Saving message body to $FullFilePath"
 
         try{
