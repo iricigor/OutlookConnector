@@ -64,8 +64,8 @@ CREATEDATE: September 29, 2015
     BEGIN {
         Write-Verbose -Message 'Export-OutlookFolder starting...'
         $ReqProps = @('Items','FullFolderPath','Folders')
+        $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
     }
-
 
     PROCESS {
 
@@ -86,7 +86,7 @@ CREATEDATE: September 29, 2015
             if ($MsgCount -gt 0) {
 
                 # if needed, create folder container
-                $TargetFolder = $OutputFolder+((($F.FolderPath) -replace '\\\\','\')) -replace '\\\\','\'
+                $TargetFolder = $OutputFolderPath+((($F.FolderPath) -replace '\\\\','\')) -replace '\\\\','\'
                 New-Folder -TargetFolder $TargetFolder # internal commands
                 Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$MsgCount+' message(s).')
                 $messages = $F.Items
@@ -105,7 +105,7 @@ CREATEDATE: September 29, 2015
             if ($SubCount -gt 0) {
                 # export subfolders
                 foreach ($subfolder in ($F.Folders)) {
-                    Export-OutlookFolder -InputFolder $subfolder -OutputFolder $OutputFolder -FileNameFormat $FileNameFormat -Progress:$Progress
+                    Export-OutlookFolder -InputFolder $subfolder -OutputFolder $OutputFolderPath -FileNameFormat $FileNameFormat -Progress:$Progress
                 }
             }
         } # end foreach

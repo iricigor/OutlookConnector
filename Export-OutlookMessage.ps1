@@ -23,7 +23,7 @@ Messages can be obtained with one of Get-Outlook commands. Type Get-Command Get-
 Messages can be provided either as parameter, or via pipeline.
 
 .PARAMETER OutputFolder
-Mandatory parameter which specifies to which folder messages will be saved. It can be both local disk, as well as network location.
+Mandatory parameter which specifies to which folder messages will be saved. It can be both local disk, as well as network location. It must exist.
 
 .PARAMETER FileNameFormat
 Optional parameter that specifies how individual files will be named based. If omitted, files will be saved in format 'FROM= %SenderName% SUBJECT= %Subject%'.
@@ -70,6 +70,9 @@ CREATEDATE: September 29, 2015
         $ReqProps = @('Subject','SaveAs')
         $ReqProps += ([regex]::Matches($FileNameFormat,$RegEx) ).Value -replace '%',''
 
+        # resolve relative path since MailItem.SaveAs does not support them
+        $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
+
         # initialize queue for skipped messages, if it is passed
         if ($SkippedMessages) {
             $SkippedMessages.Value = @()
@@ -100,10 +103,10 @@ CREATEDATE: September 29, 2015
 
             # creating file name
             $FileName = Create-FileName -InputObject $Message -FileNameFormat $FileNameFormat   # Create-FileName is internal function
-            
+
             # fix file name
-            $FileName = Get-ValidFileName -FileName  $FileName
-            $FullFilePath = Add-Numbering -FileName (Join-Path -Path $OutputFolder -ChildPath $FileName) -FileExtension 'msg'
+            $FileName = Get-ValidFileName -FileName $FileName
+            $FullFilePath = Add-Numbering -FileName (Join-Path -Path $OutputFolderPath -ChildPath $FileName) -FileExtension 'msg'
             Write-Verbose -Message "Saving message to $FullFilePath"
 
             # save message to disk
