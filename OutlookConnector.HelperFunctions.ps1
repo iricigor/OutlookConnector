@@ -12,11 +12,11 @@ function Get-ValidFileName {
 
     # trimming spaces and dots and removing extra long characters
     if (($FileName.Length) -gt 122) {$FileName = $FileName.Substring(0,123)} # 122 as we do not have extension yet
-    while ($FileName -match '(^[\s\.])|([\s\.]$)') {$FileName = $FileName.Trim(' ').Trim(".")}
+    $FileName = $FileName -replace '(^[\s\.]+)|([\s\.]+$)', ''
 
     # return value
     $FileName
-    }
+}
 
 function New-Folder {
     # creates new folder if not existing
