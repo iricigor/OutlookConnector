@@ -88,7 +88,12 @@ CREATEDATE: September 29, 2015
 
                 # if needed, create folder container
                 $TargetFolder = ($OutputFolderPath+$F.FolderPath.Replace('\\', '\')).Replace('\\', '\')
-                New-Folder -TargetFolder $TargetFolder # internal commands
+                try {
+                    New-Folder -TargetFolder $TargetFolder # internal commands
+                } catch {
+                    Write-Error -Message $_
+                    Continue # next foreach
+                }
                 Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$MsgCount+' message(s).')
                 $messages = $F.Items
                 # TODO Try foreach

@@ -25,7 +25,7 @@ function New-Folder {
 
     if (!(Test-Path -Path $TargetFolder)) {
         try {
-            mkdir -Path $TargetFolder | Out-Null
+            New-Item -ItemType Directory -Path $TargetFolder -ErrorAction Stop | Out-Null
         } catch {
             throw "Target folder $TargetFolder can't be created."
         }
