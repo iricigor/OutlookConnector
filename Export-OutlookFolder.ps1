@@ -28,6 +28,7 @@ Entire Outlok folder structure will be generated within specified folder.
 .PARAMETER FileNameFormat
 Optional parameter that specifies how individual files will be named based. If omitted, files will be saved in format 'FROM= %SenderName% SUBJECT= %Subject%'.
 File name can contain any of message parameters surrounded with %. For list of parameters, type Get-OutlookInbox | Get-Member.
+Custom format can be specified after a | character within the %, e.g. %ReceivedTime|yyyyMMddhhmmss%.
 Parameter is passed to Export-OutlookMessage function.
 
 .PARAMETER Progress
@@ -86,7 +87,7 @@ CREATEDATE: September 29, 2015
             if ($MsgCount -gt 0) {
 
                 # if needed, create folder container
-                $TargetFolder = $OutputFolderPath+((($F.FolderPath) -replace '\\\\','\')) -replace '\\\\','\'
+                $TargetFolder = ($OutputFolderPath+$F.FolderPath.Replace('\\', '\')).Replace('\\', '\')
                 New-Folder -TargetFolder $TargetFolder # internal commands
                 Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$MsgCount+' message(s).')
                 $messages = $F.Items

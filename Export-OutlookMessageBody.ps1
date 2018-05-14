@@ -32,6 +32,7 @@ Function Export-OutlookMessageBody {
     .PARAMETER FileNameFormat
     Optional parameter that specifies how individual files will be named based. If omitted, files will be saved in format 'FROM= %SenderName% SUBJECT= %Subject%'.
     File name can contain any of message parameters surrounded with %. For list of parameters, type Get-OutlookInbox | Get-Member.
+    Custom format can be specified after a | character within the %, e.g. %ReceivedTime|yyyyMMddhhmmss%.
 
    .PARAMETER ExportFormat
     Mandatory parameter which specifies to which format message body will be exported to. Allowed values are HTML, TXT (text) and RTF (rich-text).
@@ -81,9 +82,8 @@ BEGIN {
     Write-Verbose -Message 'Export-OutlookMessageBody starting...'
 
     # convert format message to real file name, replace %...% with message attribute
-    $RegEx = '(\%)(.+?)(\%)'
     $ReqProps = @('Subject','HTMLBody','RTFBody','Body')
-    $ReqProps += ([regex]::Matches($FileNameFormat,$RegEx) ).Value -replace '%',''
+    $ReqProps += Get-Properties($FileNameFormat)
 
     # resolve relative path since MailItem.SaveAs does not support them
     $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)

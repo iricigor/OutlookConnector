@@ -28,6 +28,7 @@ Mandatory parameter which specifies to which folder messages will be saved. It c
 .PARAMETER FileNameFormat
 Optional parameter that specifies how individual files will be named based. If omitted, files will be saved in format 'FROM= %SenderName% SUBJECT= %Subject%'.
 File name can contain any of message parameters surrounded with %. For list of parameters, type Get-OutlookInbox | Get-Member.
+Custom format can be specified after a | character within the %, e.g. %ReceivedTime|yyyyMMddhhmmss%.
 
 .PARAMETER SkippedMessages
 Optional parameter that specifies varaible to which will be stored messages that can not be processed.
@@ -65,10 +66,8 @@ CREATEDATE: September 29, 2015
         $olSaveAsTypes = "Microsoft.Office.Interop.Outlook.olSaveAsType" -as [type]
 
         # convert format message to real file name, replace %...% with message attribute
-        $RegEx = '(\%)(.+?)(\%)'
-        
         $ReqProps = @('Subject','SaveAs')
-        $ReqProps += ([regex]::Matches($FileNameFormat,$RegEx) ).Value -replace '%',''
+        $ReqProps += Get-Properties($FileNameFormat)
 
         # resolve relative path since MailItem.SaveAs does not support them
         $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)

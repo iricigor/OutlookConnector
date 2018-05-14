@@ -2,13 +2,14 @@
 # Functions are not exported out of module
 
 function Get-ValidFileName {
-    # refference https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
-    #https://gallery.technet.microsoft.com/scriptcenter/Save-Email-from-Outlook-to-3abf1ff3#content
+    # reference
+    # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
+    # https://gallery.technet.microsoft.com/scriptcenter/Save-Email-from-Outlook-to-3abf1ff3#content
     
     param([Parameter(Mandatory=$true)][String]$FileName)
 
     # removing illegal characters
-    foreach ($char in ([System.IO.Path]::GetInvalidFileNameChars())) {$FileName = $FileName -replace ('\'+$char),'_'}
+    foreach ($char in ([System.IO.Path]::GetInvalidFileNameChars())) {$FileName = $FileName.Replace($char, '_')}
 
     # trimming spaces and dots and removing extra long characters
     if (($FileName.Length) -gt 122) {$FileName = $FileName.Substring(0,123)} # 122 as we do not have extension yet
@@ -31,6 +32,15 @@ function New-Folder {
     }
 }
 
+function Get-Properties {
+    # get list of properties from provided pattern
+    param(
+        [Parameter(Mandatory=$true)][String]$FileNameFormat
+    )
+    $RegEx = '(?:\%)(.+?)(?:(?:\|)(.*?))?(?:\%)'
+    [regex]::Matches($FileNameFormat,$RegEx) | ForEach-Object { $_.Groups[1].Value }
+}
+
 function Validate-Properties {
     # verifies if sent object has all needed properties
     # it returns $null if everything is fine, or list of missing properties
@@ -50,25 +60,31 @@ function Validate-Properties {
 
     # return value if something found
     if (@($NotFound).Count -gt 0) {$NotFound} 
-        
 }
 
 function Create-FileName {
     # generates file name based on provided pattern and object
-    # replaces each property in pattern specified with %PropertyName% with value of Property from sent object
+    # replaces each property in pattern specified with %PropertyName|format% with value of Property from sent object
     # filename has NO extension
     param(
         [Parameter(Mandatory=$true)][psobject]$InputObject,
         [Parameter(Mandatory=$true)][String]$FileNameFormat
     )
-    $RegEx = '(\%)(.+?)(\%)'
+    $RegEx = '(?:\%)(.+?)(?:(?:\|)(.*?))?(?:\%)'
 
     $FileName = $FileNameFormat
     while ($FileName -match $RegEx) {
-        $property = $Matches[2]
+        $match = $Matches[0]
+        $property = $Matches[1]
+        if ($Matches.Count -ge 3) {
+            $format = $Matches[2]
+        } else {
+            $format = ""
+        }
         # calling function should verify that all properties exist
-        $FileName = $FileName -replace ('%'+$property+'%'),($InputObject.($property))
+        $FileName = $FileName.Replace($match, "{0:$format}" -f $InputObject.($property))
     }
+
     # return value
     $FileName
 }
@@ -93,5 +109,4 @@ function Add-Numbering {
     }
 
     $FullFilePath
-
 }
