@@ -85,9 +85,13 @@ CREATEDATE: September 29, 2015
 
             # check input object
             $NotFoundProps = Validate-Properties -InputObject $Message -RequiredProperties $ReqProps # Validate-Properties is internal function
-            if ($NotFoundProps) {      
+            if ($NotFoundProps) {
+                $MessageType = $Message.MessageClass -replace '^IPM\.' # E-mail messages are IPM.Note, other possible types are IPM.Appointment, IPM.Task, IPM.Contact, etc.
+                if ($MessageType -eq "Note") { $MessageType = "E-mail" }
                 if ($Message.Subject) { # TODO Simplify this section
-                    $ErrorMessage = 'Message ' + $Message.Subject + ' is not proper object.'
+                    $ErrorMessage = 'Message "' + $Message.Parent.FolderPath + '\' + $Message.Subject + '" of type ' + $MessageType + ' is not proper object.'
+                } elseif ($MessageType) {
+                    $ErrorMessage = 'Message of type ' + $MessageType + ' is not proper object.'
                 } else {
                     $ErrorMessage = 'Message is not proper object.'
                 }
