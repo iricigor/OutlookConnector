@@ -42,7 +42,7 @@ function Validate-Properties {
     $ObjectProperties = ($InputObject | Get-Member).Name
     $NotFound = @()
 
-    foreach ($Prop in $Properties) {
+    foreach ($Prop in $RequiredProperties) {
         if ($Prop -notin $ObjectProperties) {
             $NotFound += $Prop
         }
