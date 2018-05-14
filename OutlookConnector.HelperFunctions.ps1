@@ -1,6 +1,14 @@
 ﻿# Helper functions used within Outlook Connector module
 # Functions are not exported out of module
 
+function Trim-Length {
+    param(
+        [parameter(Mandatory=$True,ValueFromPipeline=$True)][string] $Str,
+        [parameter(Mandatory=$True,Position=1)][int] $Length
+    )
+    $Str[0..($Length-1)] -join ""
+}
+
 function Get-ValidFileName {
     # reference
     # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
@@ -65,6 +73,7 @@ function Validate-Properties {
 function Create-FileName {
     # generates file name based on provided pattern and object
     # replaces each property in pattern specified with %PropertyName|format% with value of Property from sent object
+    # calling function should verify that all properties exist
     # filename has NO extension
     param(
         [Parameter(Mandatory=$true)][psobject]$InputObject,
@@ -81,8 +90,11 @@ function Create-FileName {
         } else {
             $format = ""
         }
-        # calling function should verify that all properties exist
-        $FileName = $FileName.Replace($match, "{0:$format}" -f $InputObject.($property))
+        if ($format -match '^[\d]+$') { # if format is just an integer value then treat it as max length
+            $FileName = $FileName.Replace($match, ($InputObject.($property) | Trim-Length $format))
+        } else {
+            $FileName = $FileName.Replace($match, "{0:$format}" -f $InputObject.($property))
+        }
     }
 
     # return value
