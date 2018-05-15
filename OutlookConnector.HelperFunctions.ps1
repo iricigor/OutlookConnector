@@ -3,10 +3,10 @@
 
 function Trim-Length {
     param(
-        [parameter(Mandatory=$True,ValueFromPipeline=$True)][string] $Str,
-        [parameter(Mandatory=$True,Position=1)][int] $Length
+        [parameter(ValueFromPipeline=$True)][string] $Str,
+        [parameter(Mandatory=$true,Position=1)][ValidateRange(1,[int]::MaxValue)][int] $Length
     )
-    $Str[0..($Length-1)] -join ""
+    ($Str.TrimStart()[0..($Length-1)] -join "").TrimEnd()
 }
 
 function Get-ValidFileName {
@@ -19,7 +19,7 @@ function Get-ValidFileName {
     # removing illegal characters
     foreach ($char in ([System.IO.Path]::GetInvalidFileNameChars())) {$FileName = $FileName.Replace($char, '_')}
 
-    # trimming spaces and dots and removing extra long characters
+    # trimming spaces and dots
     $FileName = $FileName -replace '(^[\s\.]+)|([\s\.]+$)', ''
 
     # return value
