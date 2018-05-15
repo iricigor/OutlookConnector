@@ -62,19 +62,19 @@ function Validate-Properties {
     }
 }
 
-function Create-FileName {
-    # generates file name based on provided pattern and object
+function Expand-Properties {
+    # generates string based on provided pattern and object
     # replaces each property in pattern specified with %PropertyName|format% with value of Property from sent object
     # calling function should verify that all properties exist
-    # filename has NO extension
     param(
         [Parameter(Mandatory=$true)][psobject]$InputObject,
-        [Parameter(Mandatory=$true)][String]$FileNameFormat
+        [Parameter(Mandatory=$true)][String]$Pattern
     )
     $RegEx = '(?:\%)(.+?)(?:(?:\|)(.*?))?(?:\%)'
+    $EnumProperties = @('Class','Sensitivity','RemoteStatus','Importance','FlagStatus','FlagIcon','BodyFormat')
 
-    $FileName = $FileNameFormat
-    while ($FileName -match $RegEx) {
+    $ExpandedString = $Pattern
+    while ($ExpandedString -match $RegEx) {
         $match = $Matches[0]
         $property = $Matches[1]
         if ($Matches.Count -ge 3) {
@@ -82,15 +82,26 @@ function Create-FileName {
         } else {
             $format = ""
         }
+        $propertyValue = $InputObject.($property)
+        if ($property -in $EnumProperties) {
+            # the predefined set of recognized enum properties are expanded to the name of the enumeration entry instead of just the integer value
+            if ($property -eq 'Class') { # non standard, property Class returns enum value OlObjectClass and not OlClass
+                $propertyEnumName = "OlObjectClass"
+            } else {
+                $propertyEnumName = "Ol${property}"
+            }
+            $propertyEnum = "Microsoft.Office.Interop.Outlook.${propertyEnumName}" -as [type]
+            $propertyValue = [enum]::GetName($propertyEnum, $propertyValue) -replace '^ol'
+        }
         if ($format -match '^[\d]+$') { # if format is just an integer value then treat it as max length
-            $FileName = $FileName.Replace($match, ($InputObject.($property) | Trim-Length $format))
+            $ExpandedString = $ExpandedString.Replace($match, ($propertyValue | Trim-Length $format))
         } else {
-            $FileName = $FileName.Replace($match, "{0:$format}" -f $InputObject.($property))
+            $ExpandedString = $ExpandedString.Replace($match, "{0:$format}" -f $propertyValue)
         }
     }
 
     # return value
-    $FileName
+    $ExpandedString
 }
 
 function Get-ValidFileName {
@@ -100,11 +111,13 @@ function Get-ValidFileName {
     
     param([Parameter(Mandatory=$true)][String]$FileName)
 
-    # removing illegal characters
-    foreach ($char in ([System.IO.Path]::GetInvalidFileNameChars())) {$FileName = $FileName.Replace($char, '_')}
+    # remove illegal characters
+    foreach ($char in ([System.IO.Path]::GetInvalidFileNameChars())) {
+        $FileName = $FileName.Replace($char, '_')
+    }
 
-    # trimming spaces and dots
-    $FileName = $FileName -replace '(^[\s\.]+)|([\s\.]+$)', ''
+    # trim whitespace from both ends
+    $FileName = $FileName.Trim()
 
     # return value
     $FileName

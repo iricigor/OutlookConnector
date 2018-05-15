@@ -101,10 +101,8 @@ PROCESS {
 
         Write-Verbose -Message ('Processing '+($Message.Subject))
 
-        # main code
-        $FileName = Create-FileName -InputObject $Message -FileNameFormat $FileNameFormat   # Create-FileName is internal function
-
-        # fix file name
+        # generate file name
+        $FileName = Expand-Properties -InputObject $Message -Pattern $FileNameFormat
         $FileName = Get-ValidFileName -FileName $FileName
         try {
             $FullFilePath = Get-UniqueFilePath -FolderPath $OutputFolderPath -FileName $FileName -Extension $ExportFormat
