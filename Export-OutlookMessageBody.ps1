@@ -89,12 +89,13 @@ PROCESS {
     foreach ($Message in @($Messages)) {
     
         # check input object
-        $NotFoundProps = Validate-Properties -InputObject $Message -RequiredProperties $ReqProps
-        if ($NotFoundProps) {
-            Report-MissingProperties -InputObject $Message -MissingProperties $NotFoundProps
+        try {
+            Validate-Properties -InputObject $Message -RequiredProperties $ReqProps
+        } catch {
             if ($SkippedMessages) {
                 $SkippedMessages.Value += $Message # adding skipped messages to referenced variable if passed
             }
+            Write-Error $_
             Continue # next foreach
         }
 
@@ -108,7 +109,7 @@ PROCESS {
         $FullFilePath = Add-Numbering -FileName (Join-Path -Path $OutputFolderPath -ChildPath $FileName) -FileExtension $ExportFormat
         Write-Verbose -Message "Saving message body to $FullFilePath"
 
-        try{
+        try {
             switch ($ExportFormat) {
                 'HTML' {Set-Content -Value ($Message.HTMLBody) -LiteralPath $FullFilePath}
                 'RTF'  {Set-Content -Value ($Message.RTFBody) -LiteralPath $FullFilePath -Encoding Byte}

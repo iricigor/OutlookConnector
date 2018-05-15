@@ -79,7 +79,7 @@ PROCESS {
         if ($NotFoundProps) {
             Write-Error -Message ('Folder ' + $F.ToString() + ' is not proper object. Missing: ' + ($NotFoundProps -join ','))
             Continue # next foreach
-            }
+        }
 
         Write-Verbose -Message ('    Checking: '+($F.FolderPath))
         # check number of items
