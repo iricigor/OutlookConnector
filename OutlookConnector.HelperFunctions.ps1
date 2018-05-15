@@ -66,12 +66,11 @@ function Validate-Properties {
     }
 
     if ($NotFoundProperties.Length -gt 0) {
-        $MessageType = $Message.MessageClass -replace '^IPM\.' # E-mail messages are IPM.Note, other possible types are IPM.Appointment, IPM.Task, IPM.Contact, etc.
-        if ($MessageType -eq "Note") { $MessageType = "E-mail" }
+        $ClassName = [enum]::GetName([Microsoft.Office.Interop.Outlook.OlObjectClass], $Message.Class) -replace '^ol'
         if ($Message.Subject) { # TODO Simplify this section
-            $ErrorMessage = 'Message "' + $Message.Parent.FolderPath + '\' + $Message.Subject + '" of type ' + $MessageType + ' is not proper object.'
-        } elseif ($MessageType) {
-            $ErrorMessage = 'Message of type ' + $MessageType + ' is not proper object.'
+            $ErrorMessage = 'Message "' + $Message.Parent.FolderPath + '\' + $Message.Subject + '" of type ' + $ClassName + ' is not proper object.'
+        } elseif ($ClassName) {
+            $ErrorMessage = 'Message of type ' + $ClassName + ' is not proper object.'
         } else {
             $ErrorMessage = 'Message is not proper object.'
         }

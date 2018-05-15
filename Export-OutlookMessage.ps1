@@ -64,7 +64,7 @@ Param(
 BEGIN {
 
     Write-Verbose -Message 'Export-OutlookMessage starting...'
-    $olSaveAsTypes = "Microsoft.Office.Interop.Outlook.olSaveAsType" -as [type]
+    $olSaveAsTypes = "Microsoft.Office.Interop.Outlook.OlSaveAsType" -as [type]
 
     # convert format message to real file name, replace %...% with message attribute
     $ReqProps = @('Subject','SaveAs')

@@ -55,7 +55,7 @@ Param(
 BEGIN {
 
     Write-Verbose -Message 'Get-OutlookMessage obtaining type information'
-    $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
+    $olFolders = "Microsoft.Office.Interop.Outlook.OlDefaultFolders" -as [type]
     $KeyWord = 'olFolder'
     try {
         $AllFolders = ($olFolders.GetEnumNames() | Where-Object {$_ -match "^$KeyWord"}) -replace $KeyWord,''
@@ -82,7 +82,7 @@ PROCESS {
         Write-Verbose -Message "Processing $F"
         if ($F -in $AllFolders) {
             $FullName = $KeyWord + ($AllFolders | Where-Object {$_ -eq $F}) # getting proper capitalization and full name
-            $FolderDef = $Outlook.GetDefaultFolder([Microsoft.Office.Interop.Outlook.olDefaultFolders]$FullName)
+            $FolderDef = $Outlook.GetDefaultFolder([Microsoft.Office.Interop.Outlook.OlDefaultFolders]$FullName)
             # return value
             $FolderDef.Items
             Write-Verbose -Message ('Returned '+(@($FolderDef.Items).Count)+' messages.')

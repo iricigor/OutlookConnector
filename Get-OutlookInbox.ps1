@@ -61,8 +61,8 @@ Param(
 
 try {
     Write-Verbose -Message 'Obtaining messages from outlook Inbox'
-    $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
-    $InboxDef = $Outlook.GetDefaultFolder($olFolders::olFolderInBox)
+    $olFolders = "Microsoft.Office.Interop.Outlook.OlDefaultFolders" -as [type]
+    $InboxDef = $Outlook.GetDefaultFolder($olFolders::olFolderInbox)
     if (!$InboxDef) {
         throw ('Obtaining inbox definition failed. '+($Error[0].Exception))
     } else {

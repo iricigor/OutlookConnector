@@ -80,7 +80,7 @@ try {
 if ($MainOnly) {
     Write-verbose -Message '    Filtering out folders not in main mailbox.'
     try {
-        $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
+        $olFolders = "Microsoft.Office.Interop.Outlook.OlDefaultFolders" -as [type]
         $InboxDef = $Outlook.GetDefaultFolder($olFolders::olFolderInBox)
         $InboxPath = (($InboxDef.FullFolderPath) -split '\\' | Where-Object {$_})[0]
     } catch {
