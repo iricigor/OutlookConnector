@@ -65,8 +65,30 @@ function Validate-Properties {
         }
     }
 
-    # return value if something found
-    if (@($NotFound).Count -gt 0) {$NotFound} 
+    $NotFound
+}
+
+function Report-MissingProperties {
+    param(
+        [Parameter(Mandatory=$true)][psobject]$InputObject,
+        [String[]]$MissingProperties
+    )
+    if ($MissingProperties.Length -gt 0) {
+        $MessageType = $Message.MessageClass -replace '^IPM\.' # E-mail messages are IPM.Note, other possible types are IPM.Appointment, IPM.Task, IPM.Contact, etc.
+        if ($MessageType -eq "Note") { $MessageType = "E-mail" }
+        if ($Message.Subject) { # TODO Simplify this section
+            $ErrorMessage = 'Message "' + $Message.Parent.FolderPath + '\' + $Message.Subject + '" of type ' + $MessageType + ' is not proper object.'
+        } elseif ($MessageType) {
+            $ErrorMessage = 'Message of type ' + $MessageType + ' is not proper object.'
+        } else {
+            $ErrorMessage = 'Message is not proper object.'
+        }
+        $ErrorMessage += ' Missing: ' + ($MissingProperties -join ',')
+        if ($SkippedMessages) {
+            $SkippedMessages.Value += $Message # adding skipped messages to referenced variable if passed
+        }
+        Write-Error -Message $ErrorMessage
+    }
 }
 
 function Create-FileName {

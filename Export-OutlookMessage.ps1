@@ -83,22 +83,12 @@ CREATEDATE: September 29, 2015
         foreach ($Message in $Messages) {
 
             # check input object
-            $NotFoundProps = Validate-Properties -InputObject $Message -RequiredProperties $ReqProps # Validate-Properties is internal function
+            $NotFoundProps = Validate-Properties -InputObject $Message -RequiredProperties $ReqProps
             if ($NotFoundProps) {
-                $MessageType = $Message.MessageClass -replace '^IPM\.' # E-mail messages are IPM.Note, other possible types are IPM.Appointment, IPM.Task, IPM.Contact, etc.
-                if ($MessageType -eq "Note") { $MessageType = "E-mail" }
-                if ($Message.Subject) { # TODO Simplify this section
-                    $ErrorMessage = 'Message "' + $Message.Parent.FolderPath + '\' + $Message.Subject + '" of type ' + $MessageType + ' is not proper object.'
-                } elseif ($MessageType) {
-                    $ErrorMessage = 'Message of type ' + $MessageType + ' is not proper object.'
-                } else {
-                    $ErrorMessage = 'Message is not proper object.'
-                }
-                $ErrorMessage += ' Missing: ' + ($NotFoundProps -join ',')
+                Report-MissingProperties -InputObject $Message -MissingProperties $NotFoundProps
                 if ($SkippedMessages) {
                     $SkippedMessages.Value += $Message # adding skipped messages to referenced variable if passed
                 }
-                Write-Error -Message $ErrorMessage
                 Continue # next foreach
             }
 
