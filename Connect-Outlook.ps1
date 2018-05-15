@@ -54,10 +54,9 @@ try {
     # MAPI Namespace https://msdn.microsoft.com/en-us/library/office/ff865800.aspx
     # Session https://msdn.microsoft.com/en-us/library/office/ff866436.aspx
     if ($outlook) {Write-Verbose -Message 'Connected successfully.'}
-    } 
-catch {
+} catch {
     throw ('Can not obtain Outlook COM object. Try running Start-Outlook and then repeat command. '+($Error[0].Exception))
-    }
+}
 
 # ------------------------- [End of function] ----------------------------
         

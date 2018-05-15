@@ -47,77 +47,82 @@ AUTHOR:     Igor Iric, iricigor@gmail.com
 CREATEDATE: September 29, 2015
 #>
 
-    # ---------------------- [Parameters definitions] ------------------------
+# ---------------------- [Parameters definitions] ------------------------
 
-    [CmdletBinding()]
+[CmdletBinding()]
 
-    Param(
-        [parameter(Mandatory=$true,ValueFromPipeline=$true)] [ValidateNotNullOrEmpty()] [psobject[]]$Messages,
-        [parameter(Mandatory=$true,ValueFromPipeline=$false)] [string]$OutputFolder,
-        [parameter(Mandatory=$false,ValueFromPipeline=$false)] [string]$FileNameFormat='FROM= %SenderName% SUBJECT= %Subject%',
-        [parameter(Mandatory=$false,ValueFromPipeline=$false)] [ref]$SkippedMessages
+Param(
+    [parameter(Mandatory=$true,ValueFromPipeline=$true)] [ValidateNotNullOrEmpty()] [psobject[]]$Messages,
+    [parameter(Mandatory=$true,ValueFromPipeline=$false)] [string]$OutputFolder,
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)] [string]$FileNameFormat='FROM= %SenderName% SUBJECT= %Subject%',
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)] [ref]$SkippedMessages
 
-    ) #end param
+) #end param
 
-    # ------------------------- [Function start] -----------------------------
+# ------------------------- [Function start] -----------------------------
 
-    BEGIN {
-        Write-Verbose -Message 'Export-OutlookMessage starting...'
-        $olSaveAsTypes = "Microsoft.Office.Interop.Outlook.olSaveAsType" -as [type]
+BEGIN {
 
-        # convert format message to real file name, replace %...% with message attribute
-        $ReqProps = @('Subject','SaveAs')
-        $ReqProps += Get-Properties($FileNameFormat)
+    Write-Verbose -Message 'Export-OutlookMessage starting...'
+    $olSaveAsTypes = "Microsoft.Office.Interop.Outlook.olSaveAsType" -as [type]
 
-        # resolve relative path since MailItem.SaveAs does not support them
-        $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
+    # convert format message to real file name, replace %...% with message attribute
+    $ReqProps = @('Subject','SaveAs')
+    $ReqProps += Get-Properties($FileNameFormat)
 
-        # initialize queue for skipped messages, if it is passed
-        if ($SkippedMessages) {
-            $SkippedMessages.Value = @()
+    # resolve relative path since MailItem.SaveAs does not support them
+    $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
+
+    # initialize queue for skipped messages, if it is passed
+    if ($SkippedMessages) {
+        $SkippedMessages.Value = @()
+    }
+
+} # End of BEGIN block
+
+PROCESS {
+
+    foreach ($Message in $Messages) {
+
+        # check input object
+        $NotFoundProps = Validate-Properties -InputObject $Message -RequiredProperties $ReqProps
+        if ($NotFoundProps) {
+            Report-MissingProperties -InputObject $Message -MissingProperties $NotFoundProps
+            if ($SkippedMessages) {
+                $SkippedMessages.Value += $Message # adding skipped messages to referenced variable if passed
+            }
+            Continue # next foreach
         }
-    }
 
-    PROCESS {
+        Write-Verbose -Message ('Processing '+($Message.Subject))
 
-        foreach ($Message in $Messages) {
+        # creating file name
+        $FileName = Create-FileName -InputObject $Message -FileNameFormat $FileNameFormat   # Create-FileName is internal function
 
-            # check input object
-            $NotFoundProps = Validate-Properties -InputObject $Message -RequiredProperties $ReqProps
-            if ($NotFoundProps) {
-                Report-MissingProperties -InputObject $Message -MissingProperties $NotFoundProps
-                if ($SkippedMessages) {
-                    $SkippedMessages.Value += $Message # adding skipped messages to referenced variable if passed
-                }
-                Continue # next foreach
+        # fix file name
+        $FileName = Get-ValidFileName -FileName $FileName
+        $FullFilePath = Add-Numbering -FileName (Join-Path -Path $OutputFolderPath -ChildPath $FileName) -FileExtension 'msg'
+        Write-Verbose -Message "Saving message to $FullFilePath"
+
+        # save message to disk
+        try {
+            $Message.SaveAs($FullFilePath,$olSaveAsTypes::olMSGUnicode)
+        } catch {
+            if ($SkippedMessages) {
+                $SkippedMessages.Value += $Message # adding skipped messages to referenced variable if passed
             }
+            Write-Error -Message ('Message save exception.'+$Error[0].Exception)
+        }
+    } # End of foreach
 
-            Write-Verbose -Message ('Processing '+($Message.Subject))
+} # End of PROCESS block
 
-            # creating file name
-            $FileName = Create-FileName -InputObject $Message -FileNameFormat $FileNameFormat   # Create-FileName is internal function
+END {
 
-            # fix file name
-            $FileName = Get-ValidFileName -FileName $FileName
-            $FullFilePath = Add-Numbering -FileName (Join-Path -Path $OutputFolderPath -ChildPath $FileName) -FileExtension 'msg'
-            Write-Verbose -Message "Saving message to $FullFilePath"
-
-            # save message to disk
-            try {
-                $Message.SaveAs($FullFilePath,$olSaveAsTypes::olMSGUnicode)
-            } catch {
-                if ($SkippedMessages) {
-                    $SkippedMessages.Value += $Message # adding skipped messages to referenced variable if passed
-                }
-                Write-Error -Message ('Message save exception.'+$Error[0].Exception)
-            }
-        } # end foreach $Message
-
-    } # End of PROCESS block
-
-    END {
-    # function closing phase
     Write-Verbose -Message 'Export-OutlookMessage completed.'
-    }
-    # ------------------------- [End of function] ----------------------------
+
+} # End of END block
+
+# ------------------------- [End of function] ----------------------------
+
 }

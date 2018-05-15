@@ -48,79 +48,84 @@ AUTHOR:     Igor Iric, iricigor@gmail.com
 CREATEDATE: September 29, 2015
 #>
 
-    # ---------------------- [Parameters definitions] ------------------------
+# ---------------------- [Parameters definitions] ------------------------
 
-    [CmdletBinding()]
+[CmdletBinding()]
 
-    Param(
-        [parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)][psobject[]]$InputFolder,
-        [parameter(Mandatory=$true,ValueFromPipeline=$false)][string]$OutputFolder,
-        [parameter(Mandatory=$false,ValueFromPipeline=$false)][string]$FileNameFormat='FROM= %SenderName% SUBJECT= %Subject%',
-        [switch]$Progress
+Param(
+    [parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)][psobject[]]$InputFolder,
+    [parameter(Mandatory=$true,ValueFromPipeline=$false)][string]$OutputFolder,
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)][string]$FileNameFormat='FROM= %SenderName% SUBJECT= %Subject%',
+    [switch]$Progress
 
-    ) #end param
+) #end param
 
-    # ------------------------- [Function start] -----------------------------
+# ------------------------- [Function start] -----------------------------
 
-    BEGIN {
-        Write-Verbose -Message 'Export-OutlookFolder starting...'
-        $ReqProps = @('Items','FullFolderPath','Folders')
-        $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
-    }
+BEGIN {
 
-    PROCESS {
+    Write-Verbose -Message 'Export-OutlookFolder starting...'
+    $ReqProps = @('Items','FullFolderPath','Folders')
+    $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
 
-        foreach ($F in $InputFolder) {
+} # End of BEGIN block
 
-            # check input object
-            $NotFoundProps = Validate-Properties -InputObject $F -RequiredProperties $ReqProps # Validate-Properties is internal function
-            if ($NotFoundProps) {
-                Write-Error -Message ('Folder ' + $F.ToString() + ' is not proper object. Missing: ' + ($NotFoundProps -join ','))
+PROCESS {
+
+    foreach ($F in $InputFolder) {
+
+        # check input object
+        $NotFoundProps = Validate-Properties -InputObject $F -RequiredProperties $ReqProps # Validate-Properties is internal function
+        if ($NotFoundProps) {
+            Write-Error -Message ('Folder ' + $F.ToString() + ' is not proper object. Missing: ' + ($NotFoundProps -join ','))
+            Continue # next foreach
+            }
+
+        Write-Verbose -Message ('    Checking: '+($F.FolderPath))
+        # check number of items
+        $MsgCount = $F.Items.Count
+        $SubCount = $F.Folders.Count
+
+        if ($MsgCount -gt 0) {
+
+            # if needed, create folder container
+            $TargetFolder = ($OutputFolderPath+$F.FolderPath.Replace('\\', '\')).Replace('\\', '\')
+            try {
+                New-Folder -TargetFolder $TargetFolder # internal commands
+            } catch {
+                Write-Error -Message $_
                 Continue # next foreach
-                }
-
-            Write-Verbose -Message ('    Checking: '+($F.FolderPath))
-            # check number of items
-            $MsgCount = $F.Items.Count
-            $SubCount = $F.Folders.Count
-
-            if ($MsgCount -gt 0) {
-
-                # if needed, create folder container
-                $TargetFolder = ($OutputFolderPath+$F.FolderPath.Replace('\\', '\')).Replace('\\', '\')
-                try {
-                    New-Folder -TargetFolder $TargetFolder # internal commands
-                } catch {
-                    Write-Error -Message $_
-                    Continue # next foreach
-                }
-                Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$MsgCount+' message(s).')
-                $messages = $F.Items
-                # TODO Try foreach
-                $msg = $messages.GetFirst()
-                $i = 0
-                do {
-                    if ($Progress) {Write-Progress -Activity ($F.FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($i++)*100/$MsgCount)}
-                    # TODO Add numbering of folders in Progress, like (1/5)
-                    Export-OutlookMessage -Messages $msg -OutputFolder $TargetFolder -FileNameFormat $FileNameFormat
-                    $msg = $messages.GetNext()
-                } while ($msg)
-                if ($Progress) {Write-Progress -Completed -Activity $F}
             }
+            Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$MsgCount+' message(s).')
+            $messages = $F.Items
+            # TODO Try foreach
+            $msg = $messages.GetFirst()
+            $i = 0
+            do {
+                if ($Progress) {Write-Progress -Activity ($F.FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($i++)*100/$MsgCount)}
+                # TODO Add numbering of folders in Progress, like (1/5)
+                Export-OutlookMessage -Messages $msg -OutputFolder $TargetFolder -FileNameFormat $FileNameFormat
+                $msg = $messages.GetNext()
+            } while ($msg)
+            if ($Progress) {Write-Progress -Completed -Activity $F}
+        }
 
-            if ($SubCount -gt 0) {
-                # export subfolders
-                foreach ($subfolder in ($F.Folders)) {
-                    Export-OutlookFolder -InputFolder $subfolder -OutputFolder $OutputFolderPath -FileNameFormat $FileNameFormat -Progress:$Progress
-                }
+        if ($SubCount -gt 0) {
+            # export subfolders
+            foreach ($subfolder in ($F.Folders)) {
+                Export-OutlookFolder -InputFolder $subfolder -OutputFolder $OutputFolderPath -FileNameFormat $FileNameFormat -Progress:$Progress
             }
-        } # end foreach
-    } # end PROCESS
+        }
+    } # End of foreach
 
-    END {
-        Write-Verbose -Message 'Export-OutlookFolder finished.'
-    }
+} # End of PROCESS block
 
+END {
 
-    # ------------------------- [End of function] ----------------------------
+    Write-Verbose -Message 'Export-OutlookFolder completed.'
+
+} # End of END block
+
+# ------------------------- [End of function] ----------------------------
+
 }

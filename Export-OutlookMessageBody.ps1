@@ -1,63 +1,57 @@
-﻿#region synopsis
-
-#----------------------------------------------------[Function synopsis]-----------------------------------------------------
-
-Function Export-OutlookMessageBody {
+﻿function Export-OutlookMessageBody {
 
 <#
-   .SYNOPSIS
-    OutlookConnector function: Saves message body of Outlook message to a file on disk.
+.SYNOPSIS
+OutlookConnector function: Saves message body of Outlook message to a file on disk.
 
-   .DESCRIPTION
-    Saves body text of one or messages to a file on disk at specified path. All messages are saved in same folder, and file names are built based on customizable parameter FileNameFormat.
-    Messages can be obtained by one of Get-Outlook commands. Messages are saved in HTML, TXT or RTF format. If message with same name exists, numbering will be added at the end of file name.
-    Message body does not contain header information, i.e. info who sent message, when, etc. Also, it has no attachments.
+.DESCRIPTION
+Saves body text of one or messages to a file on disk at specified path. All messages are saved in same folder, and file names are built based on customizable parameter FileNameFormat.
+Messages can be obtained by one of Get-Outlook commands. Messages are saved in HTML, TXT or RTF format. If message with same name exists, numbering will be added at the end of file name.
+Message body does not contain header information, i.e. info who sent message, when, etc. Also, it has no attachments.
 
-   .Example
-    (Get-OutlookInbox)[0] | Export-OutlookMessageBody -OutputFolder 'C:\tmp' -ExportFormat HTML
-    Saves body of first message in Inbox as HTML file
+.Example
+(Get-OutlookInbox)[0] | Export-OutlookMessageBody -OutputFolder 'C:\tmp' -ExportFormat HTML
+Saves body of first message in Inbox as HTML file
 
-   .EXAMPLE
-    Get-OutlookMessage -DefaultFolder DeletedItems | Export-OutlookMessageBody -OutputFolder 'C:\tmp\deleted' -ExportFormat TXT
-    Saves all messaged from Deleted items Outlook folder to a txt files on a disk
+.EXAMPLE
+Get-OutlookMessage -DefaultFolder DeletedItems | Export-OutlookMessageBody -OutputFolder 'C:\tmp\deleted' -ExportFormat TXT
+Saves all messaged from Deleted items Outlook folder to a txt files on a disk
 
-   .PARAMETER Messages
-    Mandatory parameter which is content of one or more messages that will be saved to disk.
-    Messages can be obtained with one of Get-Outlook commands. Type Get-Command Get-Outlook* for list of commands.
-    Messages can be provided either as parameter, or via pipeline.
+.PARAMETER Messages
+Mandatory parameter which is content of one or more messages that will be saved to disk.
+Messages can be obtained with one of Get-Outlook commands. Type Get-Command Get-Outlook* for list of commands.
+Messages can be provided either as parameter, or via pipeline.
 
-    .PARAMETER OutputFolder
-    Mandatory parameter which specifies to which folder messages will be saved. It can be both local disk, as well as network location.
+.PARAMETER OutputFolder
+Mandatory parameter which specifies to which folder messages will be saved. It can be both local disk, as well as network location.
 
-    .PARAMETER FileNameFormat
-    Optional parameter that specifies how individual files will be named based. If omitted, files will be saved in format 'FROM= %SenderName% SUBJECT= %Subject%'.
-    File name can contain any of message parameters surrounded with %. For list of parameters, type Get-OutlookInbox | Get-Member.
-    Custom format can be specified after a | character within the %, e.g. %ReceivedTime|yyyyMMddhhmmss%.
+.PARAMETER FileNameFormat
+Optional parameter that specifies how individual files will be named based. If omitted, files will be saved in format 'FROM= %SenderName% SUBJECT= %Subject%'.
+File name can contain any of message parameters surrounded with %. For list of parameters, type Get-OutlookInbox | Get-Member.
+Custom format can be specified after a | character within the %, e.g. %ReceivedTime|yyyyMMddhhmmss%.
 
-   .PARAMETER ExportFormat
-    Mandatory parameter which specifies to which format message body will be exported to. Allowed values are HTML, TXT (text) and RTF (rich-text).
+.PARAMETER ExportFormat
+Mandatory parameter which specifies to which format message body will be exported to. Allowed values are HTML, TXT (text) and RTF (rich-text).
 
-   .PARAMETER SkippedMessages
-    Optional parameter that specifies varaible to which will be stored messages that can not be processed.
-    Messages can be skipped for different reasons (wrong object, missing property specified in FileNameFormat parameter, etc.
-    Variable must be referenced, i.e. sent in format [ref]$Variable, and it must be declared in advance. Current value of variable will be deleted.
+.PARAMETER SkippedMessages
+Optional parameter that specifies varaible to which will be stored messages that can not be processed.
+Messages can be skipped for different reasons (wrong object, missing property specified in FileNameFormat parameter, etc.
+Variable must be referenced, i.e. sent in format [ref]$Variable, and it must be declared in advance. Current value of variable will be deleted.
 
-    .OUTPUTS
-    Function is not returning any value.
+.OUTPUTS
+Function is not returning any value.
 
-    .LINK
-    about_OutlookConnector
+.LINK
+about_OutlookConnector
 
-   .NOTES
-    NAME:       Export-OutlookMessageBody
-    AUTHOR:     Igor Iric, IricIgor@GMail.com
-    CREATEDATE: November, 2015
+.NOTES
+NAME:       Export-OutlookMessageBody
+AUTHOR:     Igor Iric, IricIgor@GMail.com
+CREATEDATE: November, 2015
 
- #>
- #endregion
+#>
 
-#region parameters and constants
-#-------------------------------------------------[Parameters definitions]--------------------------------------------------
+# ---------------------- [Parameters definitions] ------------------------
 
 [cmdletbinding()]
 
@@ -70,15 +64,10 @@ Param(
 
 ) #end param
 
-#-------------------------------------------------[Constant declarations]---------------------------------------------------
+# ------------------------- [Function start] -----------------------------
 
-
-#endregion
-
-#region function main code
-#-------------------------------------------------[Function initialization]--------------------------------------------------
 BEGIN {
-    # function begin phase
+
     Write-Verbose -Message 'Export-OutlookMessageBody starting...'
 
     # convert format message to real file name, replace %...% with message attribute
@@ -92,12 +81,11 @@ BEGIN {
     if ($SkippedMessages) {
         $SkippedMessages.Value = @()
     }
-}
 
-#---------------------------------------------------[Function processing]----------------------------------------------------
+} # End of BEGIN block
+
 PROCESS {
 
-    # function process phase, executed once for each element in main Parameter
     foreach ($Message in @($Messages)) {
     
         # check input object
@@ -133,25 +121,16 @@ PROCESS {
             Write-Error -Message ('Message save exception. '+$Error[0].Exception)
         }
 
-    } # end of foreach
+    } # End of foreach
 
-} # end of function
-
-#-----------------------------------------------------[Function closing]-----------------------------------------------------
+} # End of PROCESS block
 
 END {
-    # function closing phase
+
     Write-Verbose -Message 'Export-OutlookMessageBody completed.'
+
+} # End of END block
+
+# ------------------------- [End of function] ----------------------------
+
 }
-
-} # end of function code
-#----------------------------------------------------[End of function]------------------------------------------------------
-#endregion
-
-
-#region free text
-#-------------------------------------------------[TO DO / Done section]----------------------------------------------------
-
-#---------------------------------------------------[Comments section]------------------------------------------------------
-
-#endregion

@@ -53,71 +53,72 @@ AUTHOR:     Igor Iric, iricigor@gmail.com
 CREATEDATE: September 29, 2015
 #>
 
-    # ---------------------- [Parameters definitions] ------------------------
+# ---------------------- [Parameters definitions] ------------------------
 
-    [CmdletBinding()]
+[CmdletBinding()]
 
-    Param(
-        [parameter(Mandatory=$false,ValueFromPipeline=$false)]$Outlook = (Connect-Outlook),
-        [switch]$Recurse,
-        [switch]$Progress,
-        [switch]$MainOnly,
-        [parameter(Mandatory=$false,ValueFromPipeline=$false)]$Filter
+Param(
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)]$Outlook = (Connect-Outlook),
+    [switch]$Recurse,
+    [switch]$Progress,
+    [switch]$MainOnly,
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)]$Filter
 
-    ) #end param
+) #end param
 
-    # ------------------------- [Function start] -----------------------------
+# ------------------------- [Function start] -----------------------------
 
-    Write-Verbose -Message 'Get-OutlookFolder starting'
-    
+Write-Verbose -Message 'Get-OutlookFolder starting'
+
+try {
+    $Folders = @($Outlook.Folders | ForEach-Object {$_}) # Converting Collection to Array
+    Write-Verbose -Message ('    Added '+(@($Folders).Count)+' base folders')
+} catch {
+    throw 'Folders list not obtained'
+}
+
+if ($MainOnly) {
+    Write-verbose -Message '    Filtering out folders not in main mailbox.'
     try {
-        $Folders = @($Outlook.Folders | ForEach-Object {$_}) # Converting Collection to Array
-        Write-Verbose -Message ('    Added '+(@($Folders).Count)+' base folders')
+        $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
+        $InboxDef = $Outlook.GetDefaultFolder($olFolders::olFolderInBox)
+        $InboxPath = (($InboxDef.FullFolderPath) -split '\\' | Where-Object {$_})[0]
     } catch {
-        throw 'Folders list not obtained'
+        throw 'Main mailbox could not be identified.'
     }
+    $Folders = @($Folders | Where-Object FullFolderPath -Match $InboxPath)
+    Write-Verbose -Message ('    Remaining '+(@($Folders).Count)+' base folders.')
+}
 
-    if ($MainOnly) {
-        Write-verbose -Message '    Filtering out folders not in main mailbox.'
-        try {
-            $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
-            $InboxDef = $Outlook.GetDefaultFolder($olFolders::olFolderInBox)
-            $InboxPath = (($InboxDef.FullFolderPath) -split '\\' | Where-Object {$_})[0]
-        } catch {
-            throw 'Main mailbox could not be identified.'
+if (!$Folders) {throw 'Folders list not obtained'}
+
+# recursivly add subfolders
+if ($Recurse) {
+    $i = 0
+    while ($i -lt (@($Folders).Count)) {
+        if ($Progress) {
+            $ActivityText = 'Folder: '+($Folders[$i]).FullFolderPath + " ($i/"+ (@($Folders).Count) + ')'
+            Write-Progress -Activity $ActivityText -PercentComplete ($i/($Folders.count)*100)
         }
-        $Folders = @($Folders | Where-Object FullFolderPath -Match $InboxPath)
-        Write-Verbose -Message ('    Remaining '+(@($Folders).Count)+' base folders.')
-    }
-    
-    if (!$Folders) {throw 'Folders list not obtained'}
-
-    # recursivly add subfolders
-    if ($Recurse) {
-        $i = 0
-        while ($i -lt (@($Folders).Count)) {
-            if ($Progress) {
-                $ActivityText = 'Folder: '+($Folders[$i]).FullFolderPath + " ($i/"+ (@($Folders).Count) + ')'
-                Write-Progress -Activity $ActivityText -PercentComplete ($i/($Folders.count)*100)
-            }
-            $Subfolders = $Folders[$i].Folders
-            if ($Subfolders -and ((@($Subfolders).Count) -gt 0)) {
-                $Folders += ($Subfolders | ForEach-Object {$_})
-                Write-Verbose -Message ('    Added '+(@($Subfolders).Count)+' folders from '+($Folders[$i]).Name)
-            }
-            $i++
+        $Subfolders = $Folders[$i].Folders
+        if ($Subfolders -and ((@($Subfolders).Count) -gt 0)) {
+            $Folders += ($Subfolders | ForEach-Object {$_})
+            Write-Verbose -Message ('    Added '+(@($Subfolders).Count)+' folders from '+($Folders[$i]).Name)
         }
-    } # end of recursive search
-    if ($Progress) {Write-Progress -Activity ' ' -Completed}
-
-    # filtering names
-    if ($Filter) {
-        $Folders = $Folders | Where-Object Name -Match $Filter
+        $i++
     }
+} # end of recursive search
+if ($Progress) {Write-Progress -Activity ' ' -Completed}
 
-    # return value
-    $Folders
-    Write-Verbose -Message 'Get-OutlookFolder finished'
+# filtering names
+if ($Filter) {
+    $Folders = $Folders | Where-Object Name -Match $Filter
+}
 
-    # ------------------------- [End of function] ----------------------------
+# return value
+$Folders
+Write-Verbose -Message 'Get-OutlookFolder finished'
+
+# ------------------------- [End of function] ----------------------------
+
 }
