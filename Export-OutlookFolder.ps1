@@ -31,6 +31,18 @@ File name can contain any of message parameters surrounded with %. For list of p
 Custom format can be specified after a | character within the %, e.g. %ReceivedTime|yyyyMMddhhmmss%.
 Parameter is passed to Export-OutlookMessage function.
 
+.PARAMETER Filter
+Optional parameter that can contain a filter string expression to be applied to restrict items to be exported.
+For syntax see https://msdn.microsoft.com/en-us/vba/outlook-vba/articles/items-restrict-method-outlook.
+
+.PARAMETER IncludeTypes
+Optional parameter to specify specific types of items to be exported, such as olMail for e-mail items.
+To list all possible values: [enum]::GetNames([Microsoft.Office.Interop.Outlook.OlObjectClass])
+
+.PARAMETER ExcludeTypes
+Optional parameter to specify specific types of items to not export, such as olContact for contact items.
+To list all possible values: [enum]::GetNames([Microsoft.Office.Interop.Outlook.OlObjectClass])
+
 .PARAMETER Progress
 If current Outlook session is connected online to remote Exchange server, saving all folders might take a minute. You may display standard progress bar while obtaining that list.
 
@@ -56,6 +68,9 @@ Param(
     [parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)][psobject[]]$InputFolder,
     [parameter(Mandatory=$true,ValueFromPipeline=$false)][string]$OutputFolder,
     [parameter(Mandatory=$false,ValueFromPipeline=$false)][string]$FileNameFormat='FROM= %SenderName% SUBJECT= %Subject%',
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)][string]$Filter,
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)][Microsoft.Office.Interop.Outlook.OlObjectClass[]]$IncludeTypes,
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)][Microsoft.Office.Interop.Outlook.OlObjectClass[]]$ExcludeTypes,
     [switch]$Progress
 
 ) #end param
@@ -83,10 +98,15 @@ PROCESS {
 
         Write-Verbose -Message ('    Checking: '+($F.FolderPath))
         # check number of items
-        $MsgCount = $F.Items.Count
+        if ($Filter) {
+            $Items = $F.Items.Restrict($Filter)
+        } else {
+            $Items = $F.Items
+        }
+        $ItemsCount = $Items.Count
         $SubCount = $F.Folders.Count
 
-        if ($MsgCount -gt 0) {
+        if ($ItemsCount -gt 0) {
 
             # if needed, create folder container
             $TargetFolder = ($OutputFolderPath+$F.FolderPath.Replace('\\', '\')).Replace('\\', '\')
@@ -96,16 +116,19 @@ PROCESS {
                 Write-Error -Message $_
                 Continue # next foreach
             }
-            Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$MsgCount+' message(s).')
-            $messages = $F.Items
+            Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$ItemsCount+' message(s).')
             # TODO Try foreach
-            $msg = $messages.GetFirst()
+            $msg = $Items.GetFirst()
             $i = 0
             do {
-                if ($Progress) {Write-Progress -Activity ($F.FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($i++)*100/$MsgCount)}
+                if ($Progress) {Write-Progress -Activity ($F.FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($i++)*100/$ItemsCount)}
                 # TODO Add numbering of folders in Progress, like (1/5)
-                Export-OutlookMessage -Messages $msg -OutputFolder $TargetFolder -FileNameFormat $FileNameFormat
-                $msg = $messages.GetNext()
+                if ((-not $IncludeTypes -or $msg.Class -in $IncludeTypes) -and (-not $ExcludeTypes -or $msg.Class -notin $ExcludeTypes)) {
+                    Export-OutlookMessage -Messages $msg -OutputFolder $TargetFolder -FileNameFormat $FileNameFormat
+                } else {
+                    Write-Verbose -Message ('Excluding message of type ' + [enum]::GetName([Microsoft.Office.Interop.Outlook.OlObjectClass], $msg.Class))
+                }
+                $msg = $Items.GetNext()
             } while ($msg)
             if ($Progress) {Write-Progress -Completed -Activity $F}
         }
@@ -113,7 +136,7 @@ PROCESS {
         if ($SubCount -gt 0) {
             # export subfolders
             foreach ($subfolder in ($F.Folders)) {
-                Export-OutlookFolder -InputFolder $subfolder -OutputFolder $OutputFolderPath -FileNameFormat $FileNameFormat -Progress:$Progress
+                Export-OutlookFolder -InputFolder $subfolder -OutputFolder $OutputFolderPath -FileNameFormat $FileNameFormat -Filter $Filter -IncludeTypes $IncludeTypes -ExcludeTypes $ExcludeTypes -Progress:$Progress
             }
         }
     } # End of foreach
