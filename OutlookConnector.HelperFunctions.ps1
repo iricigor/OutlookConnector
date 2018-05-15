@@ -9,23 +9,6 @@ function Trim-Length {
     ($Str.TrimStart()[0..($Length-1)] -join "").TrimEnd()
 }
 
-function Get-ValidFileName {
-    # reference
-    # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
-    # https://gallery.technet.microsoft.com/scriptcenter/Save-Email-from-Outlook-to-3abf1ff3#content
-    
-    param([Parameter(Mandatory=$true)][String]$FileName)
-
-    # removing illegal characters
-    foreach ($char in ([System.IO.Path]::GetInvalidFileNameChars())) {$FileName = $FileName.Replace($char, '_')}
-
-    # trimming spaces and dots
-    $FileName = $FileName -replace '(^[\s\.]+)|([\s\.]+$)', ''
-
-    # return value
-    $FileName
-}
-
 function New-Folder {
     # creates new folder if not existing
     param([Parameter(Mandatory=$true)][String]$TargetFolder)
@@ -68,7 +51,7 @@ function Validate-Properties {
     if ($NotFoundProperties.Length -gt 0) {
         $ClassName = [enum]::GetName([Microsoft.Office.Interop.Outlook.OlObjectClass], $Message.Class) -replace '^ol'
         if ($Message.Subject) { # TODO Simplify this section
-            $ErrorMessage = 'Message "' + $Message.Parent.FolderPath + '\' + $Message.Subject + '" of type ' + $ClassName + ' is not proper object.'
+            $ErrorMessage = 'Message "' + $($Message.Parent.FolderPath) + '\' + $Message.Subject + '" of type ' + $ClassName + ' is not proper object.'
         } elseif ($ClassName) {
             $ErrorMessage = 'Message of type ' + $ClassName + ' is not proper object.'
         } else {
@@ -110,24 +93,74 @@ function Create-FileName {
     $FileName
 }
 
-function Add-Numbering {
-    # generates file name based on send file name and extension
-    # if file with that name exists, it will add numbering like (1), (2), etc. at the end of name
-    # file name should be full path name
-    # example Add-Numbering 'C:\tmp\Name' 'msg'
+function Get-ValidFileName {
+    # reference
+    # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
+    # https://gallery.technet.microsoft.com/scriptcenter/Save-Email-from-Outlook-to-3abf1ff3#content
+    
+    param([Parameter(Mandatory=$true)][String]$FileName)
 
+    # removing illegal characters
+    foreach ($char in ([System.IO.Path]::GetInvalidFileNameChars())) {$FileName = $FileName.Replace($char, '_')}
+
+    # trimming spaces and dots
+    $FileName = $FileName -replace '(^[\s\.]+)|([\s\.]+$)', ''
+
+    # return value
+    $FileName
+}
+
+function Get-UniqueFilePath {
+    # Generates a unique full file path based on supplied folder path, file name and extension.
+    # If file with that name exists, it will add numbering like (1), (2), etc. at the end of name
+    # Specified folder must already exist.
     param(
-        [Parameter(Mandatory=$true)][psobject]$FileName,
-        [Parameter(Mandatory=$true)][String]$FileExtension
+        [Parameter(Mandatory=$true)][String]$FolderPath,
+        [Parameter(Mandatory=$true)][String]$FileName,
+        [Parameter(Mandatory=$true)][String]$Extension
     )
 
-    $i = 0
-    $FullFilePath = $FileName + '.' + $FileExtension
-    
-    # Check if file exists, and if yes, update name with numbering
-    while (Test-Path -LiteralPath $FullFilePath) {
-        $FullFilePath = $FileName + ' (' + (++$i) + ').' + $FileExtension
+    # Handling of path limitations:
+    # We are limited by the regular Windows API limit defined as MAX_PATH with
+    # constant value 260: The maximum number of characters, including a null terminator,
+    # for the fully-pathed filename.
+    # Remember that, although total file path is normally limited to 259 characters,
+    # the folder path is limited to 247 characters (we do not check that limit here
+    # as we assume the specified folder already exists), so we should always have some
+    # available space for filename and extension.
+    $MaxPath = 260-1
+    if ((Join-Path $FolderPath ".${Extension}").Length -ge $MaxPath) {
+        throw "Path is too long" # No room for any filename other than the extension!
+    }
+    $MaxBaseFilePath = $MaxPath - $Extension.Length - 1 
+    $BaseFilePath = Join-Path -Path $FolderPath -ChildPath $FileName
+    if ($BaseFilePath.Length -gt $MaxBaseFilePath) {
+        $FullFilePath = ($BaseFilePath | Trim-Length $MaxBaseFilePath) + ".${Extension}"
+        $Truncated = $true
+    } else {
+        $FullFilePath = "${BaseFilePath}.${Extension}"
+        $Truncated = $false
     }
 
+    # Check if file exists, and if yes, update name with numbering
+    $i = 0
+    while (Test-Path -LiteralPath $FullFilePath) {
+        $Numbering = '~' + (++$i)
+        if ((Join-Path $FolderPath "${Numbering}.${Extension}").Length -gt $MaxPath) {
+            throw "Path is not unique and it is too long to add numbering"
+        }
+        if ($BaseFilePath.Length + $Numbering.Length -gt $MaxBaseFilePath) {
+            $FullFilePath = ($BaseFilePath | Trim-Length ($MaxBaseFilePath - $Numbering.Length)) + "${Numbering}.${Extension}"
+            $Truncated = $true
+        } else {
+            $FullFilePath = "${BaseFilePath}${Numbering}.${Extension}"
+        }
+    }
+    if ($i -gt 0) {
+        Write-Verbose "Filename suffix added to get unique file path: $FullFilePath"
+    }
+    if ($Truncated) {
+        Write-Warning "Filename truncated to get valid path: $FullFilePath"
+    }
     $FullFilePath
 }

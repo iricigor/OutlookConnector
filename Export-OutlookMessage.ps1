@@ -97,15 +97,20 @@ PROCESS {
 
         Write-Verbose -Message ('Processing '+($Message.Subject))
 
-        # creating file name
+        # create base file name
         $FileName = Create-FileName -InputObject $Message -FileNameFormat $FileNameFormat   # Create-FileName is internal function
 
         # fix file name
         $FileName = Get-ValidFileName -FileName $FileName
-        $FullFilePath = Add-Numbering -FileName (Join-Path -Path $OutputFolderPath -ChildPath $FileName) -FileExtension 'msg'
-        Write-Verbose -Message "Saving message to $FullFilePath"
+        try {
+            $FullFilePath = Get-UniqueFilePath -FolderPath $OutputFolderPath -FileName $FileName -Extension 'msg'
+        } catch {
+            Write-Error $_
+            Continue # next foreach
+        }
 
         # save message to disk
+        Write-Verbose -Message "Saving message to $FullFilePath"
         try {
             $Message.SaveAs($FullFilePath,$olSaveAsTypes::olMSGUnicode)
         } catch {
@@ -114,6 +119,7 @@ PROCESS {
             }
             Write-Error -Message ('Message save exception.'+$Error[0].Exception)
         }
+
     } # End of foreach
 
 } # End of PROCESS block

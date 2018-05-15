@@ -95,8 +95,9 @@ PROCESS {
             Write-Error -Message ('Folder ' + $F.ToString() + ' is not proper object. Missing: ' + ($NotFoundProps -join ','))
             Continue # next foreach
         }
+        $FolderPath = $F.FolderPath
 
-        Write-Verbose -Message ('    Checking: '+($F.FolderPath))
+        Write-Verbose -Message ('    Checking: '+($FolderPath))
         # check number of items
         if ($Filter) {
             $Items = $F.Items.Restrict($Filter)
@@ -109,19 +110,19 @@ PROCESS {
         if ($ItemsCount -gt 0) {
 
             # if needed, create folder container
-            $TargetFolder = ($OutputFolderPath+$F.FolderPath.Replace('\\', '\')).Replace('\\', '\')
+            $TargetFolder = ($OutputFolderPath+$FolderPath.Replace('\\', '\')).Replace('\\', '\')
             try {
                 New-Folder -TargetFolder $TargetFolder # internal commands
             } catch {
                 Write-Error -Message $_
                 Continue # next foreach
             }
-            Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$ItemsCount+' message(s).')
+            Write-Verbose -Message ('    Exporting'+$FolderPath+', '+$ItemsCount+' message(s).')
             # TODO Try foreach
             $msg = $Items.GetFirst()
             $i = 0
             do {
-                if ($Progress) {Write-Progress -Activity ($F.FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($i++)*100/$ItemsCount)}
+                if ($Progress) {Write-Progress -Activity ($FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($i++)*100/$ItemsCount)}
                 # TODO Add numbering of folders in Progress, like (1/5)
                 if ((-not $IncludeTypes -or $msg.Class -in $IncludeTypes) -and (-not $ExcludeTypes -or $msg.Class -notin $ExcludeTypes)) {
                     Export-OutlookMessage -Messages $msg -OutputFolder $TargetFolder -FileNameFormat $FileNameFormat

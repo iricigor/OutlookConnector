@@ -106,9 +106,15 @@ PROCESS {
 
         # fix file name
         $FileName = Get-ValidFileName -FileName $FileName
-        $FullFilePath = Add-Numbering -FileName (Join-Path -Path $OutputFolderPath -ChildPath $FileName) -FileExtension $ExportFormat
-        Write-Verbose -Message "Saving message body to $FullFilePath"
+        try {
+            $FullFilePath = Get-UniqueFilePath -FolderPath $OutputFolderPath -FileName $FileName -Extension $ExportFormat
+        } catch {
+            Write-Error $_
+            Continue # next foreach
+        }
 
+        # save message to disk
+        Write-Verbose -Message "Saving message body to $FullFilePath"
         try {
             switch ($ExportFormat) {
                 'HTML' {Set-Content -Value ($Message.HTMLBody) -LiteralPath $FullFilePath}

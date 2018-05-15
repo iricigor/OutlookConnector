@@ -49,7 +49,7 @@ Param ()
 # create new Outlook object and return it's MAPI namespace
 try {
     Write-Verbose -Message 'Connecting to Outlook session'
-    $outlook = new-object -comobject outlook.application
+    $outlook = New-Object -ComObject Outlook.Application
     $outlook.GetNameSpace("MAPI") # this is return object
     # MAPI Namespace https://msdn.microsoft.com/en-us/library/office/ff865800.aspx
     # Session https://msdn.microsoft.com/en-us/library/office/ff866436.aspx
