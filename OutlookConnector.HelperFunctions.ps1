@@ -49,7 +49,11 @@ function Validate-Properties {
     }
 
     if ($NotFoundProperties.Length -gt 0) {
-        $ClassName = [enum]::GetName([Microsoft.Office.Interop.Outlook.OlObjectClass], $Message.Class) -replace '^ol'
+        try {
+            $ClassName = [enum]::GetName([Microsoft.Office.Interop.Outlook.OlObjectClass], $Message.Class) -replace '^ol'
+        } catch {
+            $ClassName = ""
+        }
         if ($Message.Subject) { # TODO Simplify this section
             $ErrorMessage = 'Message "' + $($Message.Parent.FolderPath) + '\' + $Message.Subject + '" of type ' + $ClassName + ' is not proper object.'
         } elseif ($ClassName) {
