@@ -28,7 +28,20 @@ Entire Outlok folder structure will be generated within specified folder.
 .PARAMETER FileNameFormat
 Optional parameter that specifies how individual files will be named based. If omitted, files will be saved in format 'FROM= %SenderName% SUBJECT= %Subject%'.
 File name can contain any of message parameters surrounded with %. For list of parameters, type Get-OutlookInbox | Get-Member.
+Custom format can be specified after a | character within the %, e.g. %ReceivedTime|yyyyMMddhhmmss%.
 Parameter is passed to Export-OutlookMessage function.
+
+.PARAMETER Filter
+Optional parameter that can contain a filter string expression to be applied to restrict items to be exported.
+For syntax see https://msdn.microsoft.com/en-us/vba/outlook-vba/articles/items-restrict-method-outlook.
+
+.PARAMETER IncludeTypes
+Optional parameter to specify specific types of items to be exported, such as olMail for e-mail items.
+To list all possible values: [enum]::GetNames([Microsoft.Office.Interop.Outlook.OlObjectClass])
+
+.PARAMETER ExcludeTypes
+Optional parameter to specify specific types of items to not export, such as olContact for contact items.
+To list all possible values: [enum]::GetNames([Microsoft.Office.Interop.Outlook.OlObjectClass])
 
 .PARAMETER Progress
 If current Outlook session is connected online to remote Exchange server, saving all folders might take a minute. You may display standard progress bar while obtaining that list.
@@ -47,74 +60,100 @@ AUTHOR:     Igor Iric, iricigor@gmail.com
 CREATEDATE: September 29, 2015
 #>
 
-    # ---------------------- [Parameters definitions] ------------------------
+# ---------------------- [Parameters definitions] ------------------------
 
-    [CmdletBinding()]
+[CmdletBinding()]
 
-    Param(
-        [parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)][psobject[]]$InputFolder,
-        [parameter(Mandatory=$true,ValueFromPipeline=$false)][string]$OutputFolder,
-        [parameter(Mandatory=$false,ValueFromPipeline=$false)][string]$FileNameFormat='FROM= %SenderName% SUBJECT= %Subject%',
-        [switch]$Progress
+Param(
+    [parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)][psobject[]]$InputFolder,
+    [parameter(Mandatory=$true,ValueFromPipeline=$false)][string]$OutputFolder,
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)][string]$FileNameFormat='FROM= %SenderName% SUBJECT= %Subject%',
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)][string]$Filter,
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)][Microsoft.Office.Interop.Outlook.OlObjectClass[]]$IncludeTypes,
+    [parameter(Mandatory=$false,ValueFromPipeline=$false)][Microsoft.Office.Interop.Outlook.OlObjectClass[]]$ExcludeTypes,
+    [switch]$Progress
 
-    ) #end param
+) #end param
 
-    # ------------------------- [Function start] -----------------------------
+# ------------------------- [Function start] -----------------------------
 
-    BEGIN {
-        Write-Verbose -Message 'Export-OutlookFolder starting...'
-        $ReqProps = @('Items','FullFolderPath','Folders')
-        $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
-    }
+BEGIN {
 
-    PROCESS {
+    Write-Verbose -Message 'Export-OutlookFolder starting...'
+    $ReqProps = @('Items','FullFolderPath','Folders')
+    $OutputFolderPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputFolder)
 
-        foreach ($F in $InputFolder) {
+} # End of BEGIN block
 
-            # check input object
-            $NotFoundProps = Validate-Properties -InputObject $F -RequiredProperties $ReqProps # Validate-Properties is internal function
-            if ($NotFoundProps) {
-                Write-Error -Message ('Folder ' + $F.ToString() + ' is not proper object. Missing: ' + ($NotFoundProps -join ','))
-                Continue # next foreach
-                }
+PROCESS {
 
-            Write-Verbose -Message ('    Checking: '+($F.FolderPath))
-            # check number of items
-            $MsgCount = $F.Items.Count
-            $SubCount = $F.Folders.Count
+    :folderloop foreach ($F in $InputFolder) {
 
-            if ($MsgCount -gt 0) {
+        # check input object
+        $NotFoundProps = Validate-Properties -InputObject $F -RequiredProperties $ReqProps # Validate-Properties is internal function
+        if ($NotFoundProps) {
+            Write-Error -Message ('Folder ' + $F.ToString() + ' is not proper object. Missing: ' + ($NotFoundProps -join ','))
+            Continue # next foreach
+        }
+        $FolderPath = $F.FolderPath
 
-                # if needed, create folder container
-                $TargetFolder = $OutputFolderPath+((($F.FolderPath) -replace '\\\\','\')) -replace '\\\\','\'
-                New-Folder -TargetFolder $TargetFolder # internal commands
-                Write-Verbose -Message ('    Exporting'+$F.FolderPath+', '+$MsgCount+' message(s).')
-                $messages = $F.Items
-                # TODO Try foreach
-                $msg = $messages.GetFirst()
-                $i = 0
-                do {
-                    if ($Progress) {Write-Progress -Activity ($F.FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($i++)*100/$MsgCount)}
-                    # TODO Add numbering of folders in Progress, like (1/5)
+        Write-Verbose -Message ('    Checking: '+($FolderPath))
+        # check number of items
+        if ($Filter) {
+            $Items = $F.Items.Restrict($Filter)
+        } else {
+            $Items = $F.Items
+        }
+        $ItemsCount = $Items.Count
+        $SubCount = $F.Folders.Count
+
+        if ($ItemsCount -gt 0) {
+
+            Write-Verbose -Message ('    Exporting ' + $FolderPath + ' , ' + $ItemsCount + ' message(s).') # may be fewer actual exported items to due to include/exclude type filter not considered yet, and also any errors such as missing properties
+            # TODO Try foreach
+            $msg = $Items.GetFirst()
+            $itemCounter = 0
+            $exportCounter = 0
+            :itemloop do {
+                if ($Progress) {Write-Progress -Activity ($FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($itemCounter++)*100/$ItemsCount)}
+                # TODO Add numbering of folders in Progress, like (1/5)
+                if ((-not $IncludeTypes -or $msg.Class -in $IncludeTypes) -and (-not $ExcludeTypes -or $msg.Class -notin $ExcludeTypes)) {
+                    if ($exportCounter -eq 0) {
+                        # before first export, create folder container if needed
+                        $TargetFolder = ($OutputFolderPath+$FolderPath.Replace('\\', '\')).Replace('\\', '\')
+                        try {
+                            New-Folder -TargetFolder $TargetFolder # internal commands
+                        } catch {
+                            Write-Error -Message $_
+                            Continue folderloop # next folder
+                        }
+                    }
                     Export-OutlookMessage -Messages $msg -OutputFolder $TargetFolder -FileNameFormat $FileNameFormat
-                    $msg = $messages.GetNext()
-                } while ($msg)
-                if ($Progress) {Write-Progress -Completed -Activity $F}
-            }
-
-            if ($SubCount -gt 0) {
-                # export subfolders
-                foreach ($subfolder in ($F.Folders)) {
-                    Export-OutlookFolder -InputFolder $subfolder -OutputFolder $OutputFolderPath -FileNameFormat $FileNameFormat -Progress:$Progress
+                    ++$exportCounter
+                } else {
+                    Write-Verbose -Message ('Excluding message of type ' + [enum]::GetName([Microsoft.Office.Interop.Outlook.OlObjectClass], $msg.Class))
                 }
+                $msg = $Items.GetNext()
+            } while ($msg)
+            if ($Progress) {Write-Progress -Completed -Activity $F}
+        }
+
+        if ($SubCount -gt 0) {
+            # export subfolders
+            foreach ($subfolder in ($F.Folders)) {
+                Export-OutlookFolder -InputFolder $subfolder -OutputFolder $OutputFolderPath -FileNameFormat $FileNameFormat -Filter $Filter -IncludeTypes $IncludeTypes -ExcludeTypes $ExcludeTypes -Progress:$Progress
             }
-        } # end foreach
-    } # end PROCESS
+        }
+    } # End of foreach
 
-    END {
-        Write-Verbose -Message 'Export-OutlookFolder finished.'
-    }
+} # End of PROCESS block
 
+END {
 
-    # ------------------------- [End of function] ----------------------------
+    Write-Verbose -Message 'Export-OutlookFolder completed.'
+
+} # End of END block
+
+# ------------------------- [End of function] ----------------------------
+
 }

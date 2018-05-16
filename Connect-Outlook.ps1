@@ -43,21 +43,20 @@ Param ()
 # ------------------------- [Function start] -----------------------------
 
 # add types
-# $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
-# $olSaveAsTypes = "Microsoft.Office.Interop.Outlook.olSaveAsType" -as [type] 
+# $olFolders = "Microsoft.Office.Interop.Outlook.OlDefaultFolders" -as [type]
+# $olSaveAsTypes = "Microsoft.Office.Interop.Outlook.OlSaveAsType" -as [type]
 
 # create new Outlook object and return it's MAPI namespace
 try {
     Write-Verbose -Message 'Connecting to Outlook session'
-    $outlook = new-object -comobject outlook.application
+    $outlook = New-Object -ComObject Outlook.Application
     $outlook.GetNameSpace("MAPI") # this is return object
     # MAPI Namespace https://msdn.microsoft.com/en-us/library/office/ff865800.aspx
     # Session https://msdn.microsoft.com/en-us/library/office/ff866436.aspx
     if ($outlook) {Write-Verbose -Message 'Connected successfully.'}
-    } 
-catch {
+} catch {
     throw ('Can not obtain Outlook COM object. Try running Start-Outlook and then repeat command. '+($Error[0].Exception))
-    }
+}
 
 # ------------------------- [End of function] ----------------------------
         

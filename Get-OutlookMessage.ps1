@@ -39,65 +39,64 @@ AUTHOR:     Igor Iric, iricigor@gmail.com
 CREATEDATE: September 29, 2015
 #>
 
+# ---------------------- [Parameters definitions] ------------------------
 
-    # ---------------------- [Parameters definitions] ------------------------
+[CmdletBinding()]
 
-    [CmdletBinding()]
+Param(
+    [parameter(ParameterSetName='Messages',Mandatory=$true,ValueFromPipeline=$true,Position=0)][string[]]$DefaultFolder,
+    [parameter(ParameterSetName='Messages',ValueFromPipeline=$false)][psobject]$Outlook = (Connect-Outlook),
+    [parameter(ParameterSetName='FolderNames',Mandatory=$true)][switch]$ListAvailableFolders
 
-    Param(
-        [parameter(ParameterSetName='Messages',Mandatory=$true,ValueFromPipeline=$true,Position=0)][string[]]$DefaultFolder,
-        [parameter(ParameterSetName='Messages',ValueFromPipeline=$false)][psobject]$Outlook = (Connect-Outlook),
-        [parameter(ParameterSetName='FolderNames',Mandatory=$true)][switch]$ListAvailableFolders
+) #end param
 
-    ) #end param
+# ------------------------- [Function start] -----------------------------
 
-    # ------------------------- [Function start] -----------------------------
+BEGIN {
 
-    BEGIN {
-        Write-Verbose -Message 'Get-OutlookMessage obtaining type information'
-        $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
-        $KeyWord = 'olFolder'
-        try {
-            $AllFolders = ($olFolders.GetEnumNames() | Where-Object {$_ -match "^$KeyWord"}) -replace $KeyWord,''
-            if (@($AllFolders).Count -lt 2) {
-                throw 'Error obtaining default folder names.'
-            }
-        } catch {
+    Write-Verbose -Message 'Get-OutlookMessage obtaining type information'
+    $olFolders = "Microsoft.Office.Interop.Outlook.OlDefaultFolders" -as [type]
+    $KeyWord = 'olFolder'
+    try {
+        $AllFolders = ($olFolders.GetEnumNames() | Where-Object {$_ -match "^$KeyWord"}) -replace $KeyWord,''
+        if (@($AllFolders).Count -lt 2) {
             throw 'Error obtaining default folder names.'
         }
-                
+    } catch {
+        throw 'Error obtaining default folder names.'
+    }
+            
 
-        if ($ListAvailableFolders) {
-            Write-Verbose -Message 'Listing all input values'
-            $AllFolders
-            $DefaultFolder = @() # avoid processing below
+    if ($ListAvailableFolders) {
+        Write-Verbose -Message 'Listing all input values'
+        $AllFolders
+        $DefaultFolder = @() # avoid processing below
+    }
+    
+} # End of BEGIN block
+
+PROCESS {
+    
+    foreach ($F in $DefaultFolder) {
+
+        Write-Verbose -Message "Processing $F"
+        if ($F -in $AllFolders) {
+            $FullName = $KeyWord + ($AllFolders | Where-Object {$_ -eq $F}) # getting proper capitalization and full name
+            $FolderDef = $Outlook.GetDefaultFolder([Microsoft.Office.Interop.Outlook.OlDefaultFolders]$FullName)
+            # return value
+            $FolderDef.Items
+            Write-Verbose -Message ('Returned '+(@($FolderDef.Items).Count)+' messages.')
+        } else {
+            Write-Error -Message "Folder with name $F is not found. Use ListAvailableFolders parameter to get all the options."
         }
-        
     }
 
-    PROCESS {
-        
-        foreach ($F in $DefaultFolder) {
+} # End of PROCESS block
 
-            Write-Verbose -Message "Processing $F"
-            if ($F -in $AllFolders) {
-                $FullName = $KeyWord + ($AllFolders | Where-Object {$_ -eq $F}) # getting proper capitalization and full name
-                $FolderDef = $Outlook.GetDefaultFolder([Microsoft.Office.Interop.Outlook.olDefaultFolders]$FullName)
-                # return value
-                $FolderDef.Items
-                Write-Verbose -Message ('Returned '+(@($FolderDef.Items).Count)+' messages.')
-            } else {
-                Write-Error -Message "Folder with name $F is not found. Use ListAvailableFolders parameter to get all the options."
-            }
-        }
-    }
+END {
 
+} # End of END block
 
-    END {
+# ------------------------- [End of function] ----------------------------
 
-    # function closing phase
-    } 
-
-
-    # ------------------------- [End of function] ----------------------------
 }

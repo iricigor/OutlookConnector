@@ -49,7 +49,6 @@ CREATEDATE: September 29, 2015
 # based on function by Microsoft Scripting Guy, Ed Wilson 
 # http://blogs.technet.com/b/heyscriptingguy/archive/2011/05/26/use-powershell-to-data-mine-your-outlook-inbox.aspx
 
-
 # ---------------------- [Parameters definitions] ------------------------
 
 [CmdletBinding()]  
@@ -59,10 +58,11 @@ Param(
 ) #end param
 
 # ------------------------- [Function start] -----------------------------
+
 try {
     Write-Verbose -Message 'Obtaining messages from outlook Inbox'
-    $olFolders = "Microsoft.Office.Interop.Outlook.olDefaultFolders" -as [type]
-    $InboxDef = $Outlook.GetDefaultFolder($olFolders::olFolderInBox)
+    $olFolders = "Microsoft.Office.Interop.Outlook.OlDefaultFolders" -as [type]
+    $InboxDef = $Outlook.GetDefaultFolder($olFolders::olFolderInbox)
     if (!$InboxDef) {
         throw ('Obtaining inbox definition failed. '+($Error[0].Exception))
     } else {
@@ -75,4 +75,5 @@ try {
 }
 
 # ------------------------- [End of function] ----------------------------
+
 }

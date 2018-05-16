@@ -38,7 +38,7 @@ Param ()
 
 if (Get-Process | Where-Object name -eq outlook) {
     Write-Verbose -Message 'Outlook already running. No action needed.'
-    }
+}
 else {
     $key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\OUTLOOK.EXE\'
 
