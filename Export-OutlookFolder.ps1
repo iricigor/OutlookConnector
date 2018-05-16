@@ -87,7 +87,7 @@ BEGIN {
 
 PROCESS {
 
-    foreach ($F in $InputFolder) {
+    :folderloop foreach ($F in $InputFolder) {
 
         # check input object
         $NotFoundProps = Validate-Properties -InputObject $F -RequiredProperties $ReqProps # Validate-Properties is internal function
@@ -109,23 +109,27 @@ PROCESS {
 
         if ($ItemsCount -gt 0) {
 
-            # if needed, create folder container
-            $TargetFolder = ($OutputFolderPath+$FolderPath.Replace('\\', '\')).Replace('\\', '\')
-            try {
-                New-Folder -TargetFolder $TargetFolder # internal commands
-            } catch {
-                Write-Error -Message $_
-                Continue # next foreach
-            }
-            Write-Verbose -Message ('    Exporting'+$FolderPath+', '+$ItemsCount+' message(s).')
+            Write-Verbose -Message ('    Exporting ' + $FolderPath + ' , ' + $ItemsCount + ' message(s).') # may be fewer actual exported items to due to include/exclude type filter not considered yet, and also any errors such as missing properties
             # TODO Try foreach
             $msg = $Items.GetFirst()
-            $i = 0
-            do {
-                if ($Progress) {Write-Progress -Activity ($FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($i++)*100/$ItemsCount)}
+            $itemCounter = 0
+            $exportCounter = 0
+            :itemloop do {
+                if ($Progress) {Write-Progress -Activity ($FolderPath) -Status (' '+$msg.subject+' ') -PercentComplete (($itemCounter++)*100/$ItemsCount)}
                 # TODO Add numbering of folders in Progress, like (1/5)
                 if ((-not $IncludeTypes -or $msg.Class -in $IncludeTypes) -and (-not $ExcludeTypes -or $msg.Class -notin $ExcludeTypes)) {
+                    if ($exportCounter -eq 0) {
+                        # before first export, create folder container if needed
+                        $TargetFolder = ($OutputFolderPath+$FolderPath.Replace('\\', '\')).Replace('\\', '\')
+                        try {
+                            New-Folder -TargetFolder $TargetFolder # internal commands
+                        } catch {
+                            Write-Error -Message $_
+                            Continue folderloop # next folder
+                        }
+                    }
                     Export-OutlookMessage -Messages $msg -OutputFolder $TargetFolder -FileNameFormat $FileNameFormat
+                    ++$exportCounter
                 } else {
                     Write-Verbose -Message ('Excluding message of type ' + [enum]::GetName([Microsoft.Office.Interop.Outlook.OlObjectClass], $msg.Class))
                 }
